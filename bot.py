@@ -6,6 +6,7 @@
 import discord
 import logging
 from discord.ext import commands
+# from discord import option
 import os
 import random
 from dotenv import load_dotenv
@@ -18,6 +19,7 @@ logging.basicConfig(level = logging.INFO)
 intents = discord.Intents.default()
 intents.message_content = True
 intents.messages = True
+intents.members = True
 
 token = os.getenv("TOKEN")
 
@@ -53,7 +55,7 @@ async def on_member_join(member):
     await member.create_dm()
     await member.dm_channel.send(f'hi {member.name}! thanks for joining the server/trying out productivity bear. use /help for more info about me.')
 
-
+# ! command
 @client.command()
 async def help(ctx):
     embed = discord.Embed(
@@ -68,7 +70,7 @@ async def help(ctx):
     await ctx.send(embed = embed)
 
 # slash commands
-@client.slash_command()
+@client.slash_command(name = "help", description = "information")
 async def help(ctx):
     embed = discord.Embed(
     title= "productivity bear help",
@@ -81,7 +83,7 @@ async def help(ctx):
     embed.set_footer(text = "check the Commands menu for how to call them.")
     await ctx.respond(embed = embed)
 
-@client.slash_command()
+@client.slash_command(name = "remindme", description = "sets a reminder for a message to be sent at a certain time")
 async def remindme(ctx):
     embed = discord.Embed(
     title= "set a reminder!",
@@ -92,7 +94,7 @@ async def remindme(ctx):
     # when do you want me to remind you?
 
 
-@client.slash_command()
+@client.slash_command(name = "motivateme", description = "sends a motivational quote")
 async def motivateme(ctx):
     quote = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)] # pull random quote
     embed = discord.Embed(
@@ -102,8 +104,8 @@ async def motivateme(ctx):
     )
     await ctx.respond(embed=embed)
 
-
-@client.slash_command()
+# setcheckin
+@client.slash_command(name = "setcheckin", description = "set up a checkin schedule for productivity bear to dm you periodically")
 async def setcheckin(ctx):
     embed = discord.Embed(
     title= "set a checkin!",
@@ -114,6 +116,16 @@ async def setcheckin(ctx):
     await ctx.respond(embed=embed)
     # when would you like to start?
 
+    # crashout (child class of dropdown)
+class timeSelector(discord.ui.Select): 
+    def __init__(self):
+        options = [ "30",
+                    "60",
+                    "120",
+                    "240",
+                    "daily",
+                    "random (avg. every 8 hours)"
+                ]
 
 # responses
 @client.event

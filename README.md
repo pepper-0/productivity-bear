@@ -1,8 +1,27 @@
 # productivity-bear
 discord app to set reminders and keep you productive... instead of yapping away
 
+### meet quinoa, your productivity companion!
+productivity bear is a Discord bot meant to help you keep yourself productive, especially if you often find yourself hanging out on Discord a lot. he has a couple of basic features to help you do so:
+- **/remindme**: allows you to schedule a time for quinoa to dm you with a specific message, such as a reminder to do something. 
+- **/motivateme**: sends a motivational quote and some encouragement to get some work done!
+- **/setcheckin**: allows you to schedule periodic dm's to check in on how you're doing. 
+
+### whats up with quinoa?
+- [![Athena Award Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Faward.athena.hackclub.com%2Fapi%2Fbadge)](https://award.athena.hackclub.com?utm_source=readme)
+- my last project for the athena award! definitely not cramming this in the last week it's due.. 
+recently i've been using discord a lot more for various reasons (programs, communicating for organizations, etc) and so i tend to have the tab open a lot. add that with dming people on it pretty often... and you get a chronically online person that is NOT working on her college apps!! so, i thought it'd be fun to have a bear friend that could remind me to stay locked instead of checking my messages.
+
+### what's quinoa made with?
+- i used the Discord API for Python; this was my first time so it was definitely a bit of a struggle to understand! i have a baseline understanding of Python and some experience with OOP/GUI/event listening from Java and JavaScript so that definitely made things a little less daunting. overall, i wouldn't say i was able to learn too much about the Discord API as a whole but i could still understand what i was coding. but i'm totally interested in adding more features to productivity bear! 
+
 ### credits
 resources used:
 - https://www.geeksforgeeks.org/python/discord-bot-in-python/
 - gh copilot (for setting up env)
 - https://discordpy-reborn.readthedocs.io/en/latest/index.html
+
+### help me improve productivity bear!
+as always, i'm always open to help and suggestions! let me know [here <3](https://github.com/pepper-0/mood-island/issues) 
+
+### last updated 10/23/25
