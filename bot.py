@@ -9,6 +9,7 @@ from discord.ext import commands, tasks
 # from discord import Option
 import os
 import random
+import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
@@ -33,7 +34,7 @@ MOTIVATE_QUOTES = [ "the little progress you've made today still matters.",
                    "growth is painful; change is painful. but nothing is as painful as staying stuck where you don't belong.",
                    "allow yourself to be a beginner. no one starts off being excellent.",
                    "life isn't about finding yourself; it's about creating yourself.",
-                   "the moment you want to uit is the moment you need to keep pushing.",
+                   "the moment you want to quit is the moment you need to keep pushing.",
                    "there is a past version of you that is so proud of how far you've come.",
                    "eveything will be okay in the end. if it's not okay, then it's not the end yet.",
                    "the future depends on what you do today.",
@@ -153,49 +154,43 @@ async def motivateme(ctx):
     await ctx.respond(embed=embed)
 
 # setcheckin
-    # helper function defs
-async def hourly_checkin(ctx):
-    checkin_message = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)] # pull random quote
-    checkin_embed = discord.Embed(
-        title = "checking in!",
-        description = checkin_message + "\n\n you got this!",
-        color= discord.Color.greyple()
-    )
-    await ctx.send(checkin_message)
-
-# @hourly_checkin.before_loop
-# async def before():
-#     await client.wait_until_ready()
 
 @client.slash_command(name = "setcheckin", description = "set up a checkin schedule for productivity bear to dm you periodically")
 async def setcheckin(ctx):
+    # obtain checkin details
     checkin_embed = discord.Embed(
-    title= "set a checkin!",
-        description= "how often would you like to receive a check-in?",
-        color= discord.Color.greyple()
+        title = "set a checkin!",
+        description = "how often would you like to receive a check-in?",
+        color = discord.Color.greyple()
     )
     checkin_embed.add_field(
-        value = "please enter a number of hours"
+        name = "please format as a number of hours. decimals for minutes also works!",
+        value = "ex: enter 1.75 for a checkin every 105 minutes",
+        inline = False
     )
 
-    try: 
-        await ctx.respond(embed=checkin_embed)
-        interval = await client.wait_for("message", check = message_check, timeout = 30) # wait for response
-        loop = tasks.Loop(hourly_checkin, hours=interval)
-        loop.start(ctx)
-        await ctx.respond("should have started checkin funct")
-    except: 
-        await ctx.respond(embed=TIMEOUT_EMBED)
+    await ctx.respond(embed=checkin_embed)
+    interval_msg = await client.wait_for("message", check = message_check, timeout = 30)
+    interval = float(interval_msg.content)
 
-# class timeSelector(discord.ui.Select): 
-#     def __init__(self):
-#         options = [ "30",
-#                     "60",
-#                     "120",
-#                     "240",
-#                     "daily",
-#                     "random (avg. every 8 hours)"
-#                 ]
+    # loop to continually check in on user
+    @tasks.loop(hours=interval)
+    async def hourly_checkin():
+        checkin_message = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)]
+        checkin_embed = discord.Embed(
+            title = "checking in!",
+            description = checkin_message + "\n\n you got this!",
+            color= discord.Color.greyple()
+        )
+        asyncio.create_task(ctx.channel.send(embed=checkin_embed))
+
+    # ignore first loop over
+    async def start_checkin(): 
+        await asyncio.sleep(int(interval * 3600))
+        hourly_checkin.start()
+    
+    await start_checkin()
+    await ctx.respond("should have started checkin funct")
 
 # responses
 @client.event
