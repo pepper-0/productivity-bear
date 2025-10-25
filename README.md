@@ -13,7 +13,7 @@ productivity bear is a Discord bot meant to help you keep yourself productive, e
 recently i've been using discord a lot more for various reasons (programs, communicating for organizations, etc) and so i tend to have the tab open a lot. add that with dming people on it pretty often... and you get a chronically online person that is NOT working on her college apps!! so, i thought it'd be fun to have a bear friend that could remind me to stay locked instead of checking my messages.
 
 ### what's quinoa made with?
-- i used the Discord API for Python; this was my first time so it was definitely a bit of a struggle to understand! i have a baseline understanding of Python and some experience with OOP/GUI/event listening from Java and JavaScript so that definitely made things a little less daunting. overall, i wouldn't say i was able to learn too much about the Discord API as a whole but i could still understand what i was coding. but i'm totally interested in adding more features to productivity bear! 
+- i used the Discord API for Python; this was my first time so it was definitely a bit of a struggle to understand! i have a baseline understanding of Python and some experience with OOP/GUI/event listening from Java and JavaScript so that definitely made things a little less daunting. overall, i wouldn't say i was able to learn too much about the Discord API as a whole but i could still understand what i was coding. but i'm totally interested in adding more features to productivity bear or doing more with the Discord API! also, i KEEP using semicolons and brackets. it's been a minute since ive actually coded in python (BWSI shenanigans but lowk i think our whole class vibecoded, including myself. and a bit with code in place but before that was like 2.5 years ago in an introductory programming class lols. i digress.)
 
 ### credits
 resources used:
@@ -22,6 +22,6 @@ resources used:
 - https://discordpy-reborn.readthedocs.io/en/latest/index.html
 
 ### help me improve productivity bear!
-as always, i'm always open to help and suggestions! let me know [here <3](https://github.com/pepper-0/mood-island/issues) 
+as always, i'm always open to help and suggestions! let me know [here <3](https://github.com/pepper-0/productivity-bear/issues) 
 
 ### last updated 10/23/25

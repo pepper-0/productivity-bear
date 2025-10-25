@@ -12,7 +12,6 @@ import random
 from dotenv import load_dotenv
 load_dotenv()
 
-
 #setup
 logging.basicConfig(level = logging.INFO)
 
@@ -53,14 +52,14 @@ async def on_ready():
 @client.event
 async def on_member_join(member):
     await member.create_dm()
-    await member.dm_channel.send(f'hi {member.name}! thanks for joining the server/trying out productivity bear. use /help for more info about me.')
+    await member.dm_channel.send(f'hi {member.name}! thanks for joining the server/trying out productivity bear. my name\'s quinoa! use /help for more info about me.')
 
 # ! command
 @client.command()
 async def help(ctx):
     embed = discord.Embed(
     title= "productivity bear help",
-        description= "hi! im productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
+        description= "hi! im quinoa, your productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
         color= discord.Color.greyple()
     )
     embed.add_field(name = "/remindme", value = "sends you reminders at specific times\n", inline = False)
@@ -70,11 +69,15 @@ async def help(ctx):
     await ctx.send(embed = embed)
 
 # slash commands
+    # function defs
+def message_check(message):
+    return (message.author != client.user)
+
 @client.slash_command(name = "help", description = "information")
 async def help(ctx):
     embed = discord.Embed(
     title= "productivity bear help",
-        description= "hi! im productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
+        description= "hi! im quinoa, your productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
         color= discord.Color.greyple()
     )
     embed.add_field(name = "/remindme", value = "sends you reminders at specific times\n", inline = False)
@@ -83,15 +86,34 @@ async def help(ctx):
     embed.set_footer(text = "check the Commands menu for how to call them.")
     await ctx.respond(embed = embed)
 
+    # remindme with arg
+
 @client.slash_command(name = "remindme", description = "sets a reminder for a message to be sent at a certain time")
-async def remindme(ctx):
-    embed = discord.Embed(
-    title= "set a reminder!",
-        description= "what do you want to call your reminder?",
+async def remindme(ctx, reminder: str, time: float):
+    # general variable def
+    timeout_embed = discord.Embed(
+        title = "set your reminder!",
+        description = "an unexpected error has occurred, or you timed out; call /remindme again to retry.",
         color= discord.Color.greyple()
     )
-    await ctx.respond(embed=embed)
+    # general var
+
     # when do you want me to remind you?
+    time_embed = discord.Embed(
+    title= "set your reminder!",
+        description= "when would you like me to remind you of \"" + reminder + "\"?",
+        color= discord.Color.greyple()
+    )
+    try:
+        await ctx.respond(embed = time_embed) # send out
+        reminder_time = await client.wait_for("message", check = message_check, timeout = 30) # wait for response
+    except:
+        await ctx.respond(embed = timeout_embed)
+        return
+    
+    # recieve and process time
+    await ctx.respond("shockingly this should respond directly to ur msg but lets see.") # confirmation msg. will change
+
 
 
 @client.slash_command(name = "motivateme", description = "sends a motivational quote")
