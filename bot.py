@@ -5,10 +5,11 @@
 # imports
 import discord
 import logging
-from discord.ext import commands
-# from discord import option
+from discord.ext import commands, tasks
+# from discord import Option
 import os
 import random
+from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -42,6 +43,11 @@ MOTIVATE_QUOTES = [ "the little progress you've made today still matters.",
                    "you're going to be okay, even if you have to start over again.",
                    "not every closed door is locked; push.",
                    "remember: if you avoid failure, you also avoid success."]
+TIMEOUT_EMBED = discord.Embed(
+    title = "set your reminder!",
+    description = "an unexpected error has occurred, or you timed out; call the command again to retry.",
+    color= discord.Color.greyple()
+)
 
 # events
 @client.event
@@ -89,31 +95,51 @@ async def help(ctx):
     # remindme with arg
 
 @client.slash_command(name = "remindme", description = "sets a reminder for a message to be sent at a certain time")
-async def remindme(ctx, reminder: str, time: float):
+async def remindme(
+    ctx, 
+    reminder: str = "enter the name of your reminder",
+    time: str = "time of your reminder"
+    ):
     # general variable def
-    timeout_embed = discord.Embed(
-        title = "set your reminder!",
-        description = "an unexpected error has occurred, or you timed out; call /remindme again to retry.",
-        color= discord.Color.greyple()
-    )
-    # general var
+    reminder_time = ""
 
     # when do you want me to remind you?
     time_embed = discord.Embed(
     title= "set your reminder!",
         description= "when would you like me to remind you of \"" + reminder + "\"?",
-        color= discord.Color.greyple()
+        color = discord.Color.greyple()
+    )
+    time_embed.add_field(
+        name = "please format as MM/DD/YY hh:mm",
+        value = "ex. 5/28/26 16:23\n\nplease use military time!",
+        inline = False
     )
     try:
         await ctx.respond(embed = time_embed) # send out
         reminder_time = await client.wait_for("message", check = message_check, timeout = 30) # wait for response
     except:
-        await ctx.respond(embed = timeout_embed)
+        await ctx.respond(embed = TIMEOUT_EMBED)
         return
     
-    # recieve and process time
-    await ctx.respond("shockingly this should respond directly to ur msg but lets see.") # confirmation msg. will change
+    # parse time str
+        # variables
+    try:
+        reminder_date = datetime.strptime(reminder_time, "%M/%D/%Y %H:%M:")
+    except:
+        await ctx.respond(embed = TIMEOUT_EMBED)
+        return
+    
+    reminder_confirmation = discord.Embed(
+        title = "confirm reminder",
+        description = "you will receive the reminder \"" + reminder + "\" at " + str(reminder_date),
+        color = discord.Color.greyple()
+    )
+    reminder_confirmation.add_field(
+        value = "is this correct?"
+    )
+    await ctx.respond(embed=reminder_confirmation)
 
+    # handle sending reminder
 
 
 @client.slash_command(name = "motivateme", description = "sends a motivational quote")
@@ -127,27 +153,49 @@ async def motivateme(ctx):
     await ctx.respond(embed=embed)
 
 # setcheckin
+    # helper function defs
+async def hourly_checkin(ctx):
+    checkin_message = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)] # pull random quote
+    checkin_embed = discord.Embed(
+        title = "checking in!",
+        description = checkin_message + "\n\n you got this!",
+        color= discord.Color.greyple()
+    )
+    await ctx.send(checkin_message)
+
+# @hourly_checkin.before_loop
+# async def before():
+#     await client.wait_until_ready()
+
 @client.slash_command(name = "setcheckin", description = "set up a checkin schedule for productivity bear to dm you periodically")
 async def setcheckin(ctx):
-    embed = discord.Embed(
+    checkin_embed = discord.Embed(
     title= "set a checkin!",
         description= "how often would you like to receive a check-in?",
         color= discord.Color.greyple()
     )
-    embed.add_field(name = "", value = "", inline = False)
-    await ctx.respond(embed=embed)
-    # when would you like to start?
+    checkin_embed.add_field(
+        value = "please enter a number of hours"
+    )
 
-    # crashout (child class of dropdown)
-class timeSelector(discord.ui.Select): 
-    def __init__(self):
-        options = [ "30",
-                    "60",
-                    "120",
-                    "240",
-                    "daily",
-                    "random (avg. every 8 hours)"
-                ]
+    try: 
+        await ctx.respond(embed=checkin_embed)
+        interval = await client.wait_for("message", check = message_check, timeout = 30) # wait for response
+        loop = tasks.Loop(hourly_checkin, hours=interval)
+        loop.start(ctx)
+        await ctx.respond("should have started checkin funct")
+    except: 
+        await ctx.respond(embed=TIMEOUT_EMBED)
+
+# class timeSelector(discord.ui.Select): 
+#     def __init__(self):
+#         options = [ "30",
+#                     "60",
+#                     "120",
+#                     "240",
+#                     "daily",
+#                     "random (avg. every 8 hours)"
+#                 ]
 
 # responses
 @client.event
