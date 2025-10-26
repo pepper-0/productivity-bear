@@ -3,9 +3,9 @@ discord app to set reminders and keep you productive... instead of yapping away
 
 ### meet quinoa, your productivity companion!
 productivity bear is a Discord bot meant to help you keep yourself productive, especially if you often find yourself hanging out on Discord a lot. he has a couple of basic features to help you do so:
-- **/remindme**: allows you to schedule a time for quinoa to dm you with a specific message, such as a reminder to do something. 
 - **/motivateme**: sends a motivational quote and some encouragement to get some work done!
 - **/setcheckin**: allows you to schedule periodic dm's to check in on how you're doing. 
+- fun fact: quinoa loves cherries!
 
 ### whats up with quinoa?
 - [![Athena Award Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Faward.athena.hackclub.com%2Fapi%2Fbadge)](https://award.athena.hackclub.com?utm_source=readme)
@@ -13,7 +13,9 @@ productivity bear is a Discord bot meant to help you keep yourself productive, e
 recently i've been using discord a lot more for various reasons (programs, communicating for organizations, etc) and so i tend to have the tab open a lot. add that with dming people on it pretty often... and you get a chronically online person that is NOT working on her college apps!! so, i thought it'd be fun to have a bear friend that could remind me to stay locked instead of checking my messages.
 
 ### what's quinoa made with?
-- i used the Discord API for Python; this was my first time so it was definitely a bit of a struggle to understand! i have a baseline understanding of Python and some experience with OOP/GUI/event listening from Java and JavaScript so that definitely made things a little less daunting. overall, i wouldn't say i was able to learn too much about the Discord API as a whole but i could still understand what i was coding. but i'm totally interested in adding more features to productivity bear or doing more with the Discord API! also, i KEEP using semicolons and brackets. it's been a minute since ive actually coded in python (BWSI shenanigans but lowk i think our whole class vibecoded, including myself. and a bit with code in place but before that was like 2.5 years ago in an introductory programming class lols. i digress.)
+- i used the Discord API for Python; this was my first time so it was definitely a bit of a struggle to understand! i have a baseline understanding of Python and some experience with OOP/GUI/event listening from Java and JavaScript so that definitely made things a little less daunting. overall, i wouldn't say i was able to learn too much about the Discord API as a whole but i could still understand what i was coding. but i'm totally interested in adding more features to productivity bear or doing more with the Discord API! 
+- side tangent: i KEEP using semicolons and brackets. it's been a minute since ive actually coded in python (BWSI shenanigans but lowk i think our whole class vibecoded, including myself. and a bit with code in place but before that was like 2.5 years ago in an introductory programming class lols. i digress.)
+- side side tangent: oml this took 5 times longer than i hoped it would take. i really told myself "eyah this'll take a few hours max" and then i kept realizing if i made a certain feature... i'd need to make it 29384 safety mechanisms... and here we are. oops.
 
 ### credits
 resources used:
@@ -28,4 +30,7 @@ profile image:
 ### help me improve productivity bear!
 as always, i'm always open to help and suggestions! let me know [here <3](https://github.com/pepper-0/productivity-bear/issues) 
 
-### last updated 10/23/25
+### future features to be added: 
+- **/remindme**: allows you to schedule a time for quinoa to dm you with a specific message, such as a reminder to do something. i was originally going to add this into v1 but athena award is due a little too soon and i need to be locking in on college apps :sob:
+
+### last updated 10/26/25

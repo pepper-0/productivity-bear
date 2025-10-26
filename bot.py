@@ -28,20 +28,71 @@ client = commands.Bot(command_prefix = "!", intents=intents, help_command = None
 
 # stuff 
 class confirmation_buttons(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
     @discord.ui.button(label = "yes", custom_id = "yes_button", style = discord.ButtonStyle.blurple, emoji = "✅")
-    async def yes_callback(self, button, ctx):
+    async def yes_callback(self, button, interaction):
         button.disabled = True
-        await ctx.response.send_message("yes clicked")
+        self.value = "yes"
+        self.stop()
+        await interaction.response.defer()
 
     @discord.ui.button(label = "wait, go back", custom_id = "retry_button", style = discord.ButtonStyle.blurple, emoji = "⬅️")
-    async def retry_callback(self, button, ctx):
+    async def retry_callback(self, button, interaction):
         button.disabled = True
-        await ctx.response.send_message("retry clicked")
+        self.value = "retry"
+        self.stop()
+        await interaction.response.defer()
 
     @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
-    async def no_callback(self, button, ctx):
+    async def no_callback(self, button, interaction):
         button.disabled = True
-        await ctx.response.send_message("no clicked")
+        self.value = "retry"
+        self.stop()
+        await interaction.response.defer()
+
+class settings_buttons(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    @discord.ui.button(label = "checkin", custom_id = "checkin_button", style = discord.ButtonStyle.blurple, emoji = "⏳")
+    async def checkin_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "checkin"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "reminder", custom_id = "reminder_button", style = discord.ButtonStyle.blurple, emoji = "🗒")
+    async def reminder_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "reminder"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "exit", custom_id = "exit_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def exit_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "exit"
+        self.stop()
+        await interaction.response.defer()
+
+class back_exit_button(discord.ui.View):
+    @discord.ui.button(label = "back", custom_id = "back_button", style = discord.ButtonStyle.blurple, emoji = "⬅️")
+    async def reminder_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "back"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "exit", custom_id = "exit_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def exit_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "exit"
+        self.stop()
+        await interaction.response.defer()
 
 MOTIVATE_QUOTES = [ "the little progress you've made today still matters.",
                    "push yourself, because who else will do it for you?",
@@ -82,7 +133,7 @@ async def on_member_join(member):
 async def help(ctx):
     embed = discord.Embed(
     title= "productivity bear help",
-        description= "hi! im quinoa, your productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
+        description= "hi! im quinoa, your productivity bear! ʕᵔᴥᵔʔ  i'm here to help you be productive.\nwhat can i do, you ask?",
         color= discord.Color.greyple()
     )
     embed.add_field(name = "/remindme", value = "sends you reminders at specific times\n", inline = False)
@@ -100,7 +151,7 @@ def message_check(message):
 async def help(ctx):
     embed = discord.Embed(
     title= "productivity bear help",
-        description= "hi! im quinoa, your productivity bear! i'm here to help you be productive.\nwhat can i do, you ask?",
+        description= "hi! im quinoa, your productivity bear! ʕᵔᴥᵔʔ i'm here to help you be productive.\nwhat can i do, you ask?",
         color= discord.Color.greyple()
     )
     embed.add_field(name = "/remindme", value = "sends you reminders at specific times\n", inline = False)
@@ -190,7 +241,7 @@ async def setcheckin(ctx):
         color = discord.Color.greyple()
     )
     confirmation_embed.add_field(
-        name = "you will receive a checkin dm from quinoa every " + str(interval) + " hours, starting now.",
+        name = f"you will receive a checkin dm from quinoa every {interval} hours, starting now.",
         value = "is this correct?",
         inline = False
     )
@@ -208,28 +259,29 @@ async def setcheckin(ctx):
         interval = float(interval_msg.content)
 
         # confirm message
-        await ctx.respond(embed=confirmation_embed, view=confirmation_buttons())
         try:
-            confirmation_response = await client.wait_for("button_click", timeout = 30)
+            view = confirmation_buttons()
+            await ctx.respond(embed=confirmation_embed, view=view) 
+            await view.wait()
         except: 
             ctx.respond(embed = TIMEOUT_EMBED)
             return
-        
-        if confirmation_response.custom_id == "no_button":
+
+        if view.value == "no":
             return
-        elif confirmation_response.custom_id == "retry_button":
+        elif view.value == "retry":
             continue
-        elif confirmation_response.custom_id == "yes_button":
+        elif view.value == "yes":
             break
     
     # success
     success_embed = discord.Embed(
         title = "success: checkin has been set!",
-        description = "let's get some work done >:D",
+        description = "let's get some work done!   ʕ •̀ o •́ ʔ",
         color = discord.Color.greyple()
     )
 
-    ctx.respond(embed=success_embed)
+    await ctx.respond(embed=success_embed)
 
     # function def loop to continually check in on user
     @tasks.loop(hours=interval)
@@ -237,11 +289,13 @@ async def setcheckin(ctx):
         checkin_message = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)]
         checkin_embed = discord.Embed(
             title = "checking in!",
-            description = checkin_message + "\n\n you got this!",
+            description = checkin_message + "\n\n you got this!   ʕ·ᴥ·ʔ",
             color= discord.Color.greyple()
         )
-
-        asyncio.create_task(ctx.author.dm_channel.send(embed=checkin_embed))
+        try:
+            asyncio.create_task(ctx.author.send(embed=checkin_embed))
+        except: 
+            asyncio.create_task(ctx.author.send(embed=checkin_embed))
 
     # function def ignore first loop over
     async def start_checkin(): 
@@ -251,19 +305,48 @@ async def setcheckin(ctx):
     # call function 
     await start_checkin()
 
+# settings
+@client.slash_command(name = "settings", description = "manage your checkins and reminders!")
+async def settings(ctx):
+    main_settings_embed = discord.Embed(
+        title = "settings home",
+        description = "which settings are you looking for?",
+        color = discord.Color.greyple()
+    )
+
+    view = settings_buttons()
+    await ctx.respond(embed=main_settings_embed, view=view)
+    await view.wait()
+
+    reminder_settings_embed = discord.Embed(
+        title = "reminder settings",
+        description = "all your reminders!",
+        color = discord.Color.greyple()
+    )
+    checkin_settings_embed = discord.Embed(
+        title = "checkin settings",
+        description = "your checkin settings",
+        color = discord.Color.greyple()
+    )
+
+    if view.value == "reminder":
+        await ctx.respond(embed=reminder_settings_embed)
+    elif view.value == "checkin":
+        await ctx.respond(embed=checkin_settings_embed)
+    elif view.value == "exit":
+        return
+
 # responses
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
-    if 'hello' in message.content:
-        await message.channel.send(f'hello {message.author}!')
-    
     if 'quinoa' in message.content:
-        await message.channel.send(':0 just heard my name!')
-    
-    if 'cherry' in message.content or 'cherries' in message.content:
-        await message.channel.send('did i just hear cherries? :0 they\'re my favorite food!')
+        await message.channel.send('ʕᵒ̤̑ ₀̑ ᵒ̤̑ʔ   i just heard my name!')
+    elif 'hello' in message.content:
+        await message.channel.send(f'hello {message.author}!   ʕっ•ᴥ•ʔっ')
+    elif 'cherry' in message.content or 'cherries' in message.content:
+        await message.channel.send('did i just hear someone say cherries? they\'re my favorite food!!    ʕ✧ᴥ✧ʔ')
     
     await client.process_commands(message)
 
