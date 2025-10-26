@@ -27,6 +27,22 @@ token = os.getenv("TOKEN")
 client = commands.Bot(command_prefix = "!", intents=intents, help_command = None)
 
 # stuff 
+class confirmation_buttons(discord.ui.View):
+    @discord.ui.button(label = "yes", custom_id = "yes_button", style = discord.ButtonStyle.blurple, emoji = "✅")
+    async def yes_callback(self, button, ctx):
+        button.disabled = True
+        await ctx.response.send_message("yes clicked")
+
+    @discord.ui.button(label = "wait, go back", custom_id = "retry_button", style = discord.ButtonStyle.blurple, emoji = "⬅️")
+    async def retry_callback(self, button, ctx):
+        button.disabled = True
+        await ctx.response.send_message("retry clicked")
+
+    @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def no_callback(self, button, ctx):
+        button.disabled = True
+        await ctx.response.send_message("no clicked")
+
 MOTIVATE_QUOTES = [ "the little progress you've made today still matters.",
                    "push yourself, because who else will do it for you?",
                    "focus on improving yourself, not proving yourself.",
@@ -154,10 +170,10 @@ async def motivateme(ctx):
     await ctx.respond(embed=embed)
 
 # setcheckin
-
 @client.slash_command(name = "setcheckin", description = "set up a checkin schedule for productivity bear to dm you periodically")
 async def setcheckin(ctx):
-    # obtain checkin details
+    # variable definitions
+    interval = -1.00
     checkin_embed = discord.Embed(
         title = "set a checkin!",
         description = "how often would you like to receive a check-in?",
@@ -165,15 +181,57 @@ async def setcheckin(ctx):
     )
     checkin_embed.add_field(
         name = "please format as a number of hours. decimals for minutes also works!",
-        value = "ex: enter 1.75 for a checkin every 105 minutes",
+        value = "\nex: enter 1.75 for a checkin every 105 minutes",
+        inline = False
+    )
+    confirmation_embed = discord.Embed(
+        title = "set a checkin!",
+        description = "please confirm your checkin details",
+        color = discord.Color.greyple()
+    )
+    confirmation_embed.add_field(
+        name = "you will receive a checkin dm from quinoa every " + str(interval) + " hours, starting now.",
+        value = "is this correct?",
         inline = False
     )
 
-    await ctx.respond(embed=checkin_embed)
-    interval_msg = await client.wait_for("message", check = message_check, timeout = 30)
-    interval = float(interval_msg.content)
+    # variables
 
-    # loop to continually check in on user
+    while (True):
+        # obtain checkin details
+        await ctx.respond(embed=checkin_embed)
+        try:
+            interval_msg = await client.wait_for("message", check = message_check, timeout = 30)
+        except:
+            ctx.respond(embed = TIMEOUT_EMBED)
+            return
+        interval = float(interval_msg.content)
+
+        # confirm message
+        await ctx.respond(embed=confirmation_embed, view=confirmation_buttons())
+        try:
+            confirmation_response = await client.wait_for("button_click", timeout = 30)
+        except: 
+            ctx.respond(embed = TIMEOUT_EMBED)
+            return
+        
+        if confirmation_response.custom_id == "no_button":
+            return
+        elif confirmation_response.custom_id == "retry_button":
+            continue
+        elif confirmation_response.custom_id == "yes_button":
+            break
+    
+    # success
+    success_embed = discord.Embed(
+        title = "success: checkin has been set!",
+        description = "let's get some work done >:D",
+        color = discord.Color.greyple()
+    )
+
+    ctx.respond(embed=success_embed)
+
+    # function def loop to continually check in on user
     @tasks.loop(hours=interval)
     async def hourly_checkin():
         checkin_message = MOTIVATE_QUOTES[random.randint(0, len(MOTIVATE_QUOTES) - 1)]
@@ -182,26 +240,30 @@ async def setcheckin(ctx):
             description = checkin_message + "\n\n you got this!",
             color= discord.Color.greyple()
         )
-        asyncio.create_task(ctx.channel.send(embed=checkin_embed))
 
-    # ignore first loop over
+        asyncio.create_task(ctx.author.dm_channel.send(embed=checkin_embed))
+
+    # function def ignore first loop over
     async def start_checkin(): 
         await asyncio.sleep(int(interval * 3600))
         hourly_checkin.start()
     
+    # call function 
     await start_checkin()
-    await ctx.respond("should have started checkin funct")
 
 # responses
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.content.startswith('hello'):
-        await message.channel.send('hi!')
+    if 'hello' in message.content:
+        await message.channel.send(f'hello {message.author}!')
     
-    if message.content.startswith('bear'):
-        await message.channel.send('thats me :)')
+    if 'quinoa' in message.content:
+        await message.channel.send(':0 just heard my name!')
+    
+    if 'cherry' in message.content or 'cherries' in message.content:
+        await message.channel.send('did i just hear cherries? :0 they\'re my favorite food!')
     
     await client.process_commands(message)
 
