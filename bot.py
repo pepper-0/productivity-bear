@@ -26,6 +26,10 @@ token = os.getenv("TOKEN")
 
 client = commands.Bot(command_prefix = "!", intents=intents, help_command = None)
 
+# global variables
+all_checkins = {} # stores all checkin loops
+all_reminders = {} # stores all reminders of all users
+
 # stuff 
 class confirmation_buttons(discord.ui.View):
     def __init__(self):
@@ -58,21 +62,21 @@ class settings_buttons(discord.ui.View):
         super().__init__()
         self.value = None
 
-    @discord.ui.button(label = "checkin", custom_id = "checkin_button", style = discord.ButtonStyle.blurple, emoji = "⏳")
+    @discord.ui.button(label = "remove checkin", custom_id = "checkin_button", style = discord.ButtonStyle.blurple, emoji = "⏳")
     async def checkin_callback(self, button, interaction):
         button.disabled = True
         self.value = "checkin"
         self.stop()
         await interaction.response.defer()
 
-    @discord.ui.button(label = "reminder", custom_id = "reminder_button", style = discord.ButtonStyle.blurple, emoji = "🗒")
+    @discord.ui.button(label = "manage reminders", custom_id = "reminder_button", style = discord.ButtonStyle.blurple, emoji = "🗒")
     async def reminder_callback(self, button, interaction):
         button.disabled = True
         self.value = "reminder"
         self.stop()
         await interaction.response.defer()
 
-    @discord.ui.button(label = "exit", custom_id = "exit_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    @discord.ui.button(label = "done", custom_id = "exit_button", style = discord.ButtonStyle.grey, emoji = "❌")
     async def exit_callback(self, button, interaction):
         button.disabled = True
         self.value = "exit"
@@ -91,6 +95,21 @@ class back_exit_button(discord.ui.View):
     async def exit_callback(self, button, interaction):
         button.disabled = True
         self.value = "exit"
+        self.stop()
+        await interaction.response.defer()
+
+class yes_no_button(discord.ui.View):
+    @discord.ui.button(label = "yes", custom_id = "yes_button", style = discord.ButtonStyle.blurple, emoji = "✅")
+    async def reminder_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "yes"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def exit_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "no"
         self.stop()
         await interaction.response.defer()
 
@@ -224,7 +243,9 @@ async def motivateme(ctx):
 @client.slash_command(name = "setcheckin", description = "set up a checkin schedule for productivity bear to dm you periodically")
 async def setcheckin(ctx):
     # variable definitions
-    interval = -1.00
+    interval = None
+    loop = None
+
     checkin_embed = discord.Embed(
         title = "set a checkin!",
         description = "how often would you like to receive a check-in?",
@@ -240,13 +261,36 @@ async def setcheckin(ctx):
         description = "please confirm your checkin details",
         color = discord.Color.greyple()
     )
-    confirmation_embed.add_field(
-        name = f"you will receive a checkin dm from quinoa every {interval} hours, starting now.",
-        value = "is this correct?",
-        inline = False
-    )
 
-    # variables
+
+    # checkin repetition checker
+    id = ctx.author.id
+    if id in all_checkins:
+        duplicate_embed = discord.Embed(
+            title = "warning: you already have a checkin scheduled!",
+            description = f"quinoa already schedules checkin dms with you.\n\n would you like to cancel this checkin and create a new one?",
+            color = discord.Color.greyple()
+        )
+        try: 
+            duplicate_view = yes_no_button()
+            await ctx.respond(embed=duplicate_embed, view=duplicate_view)
+            await duplicate_view.wait()
+        except: 
+            await ctx.respond(embed=TIMEOUT_EMBED)
+            return
+        
+        if duplicate_view == "yes":
+            # cancel duplicate and continue 
+            all_checkins[id].cancel()
+            del all_checkins[id]
+            checkin_removed_embed = discord.Embed(
+                title = "success!",
+                description = "checkin removed!",
+                color = discord.Color.greyple()
+            )
+            await ctx.respond(embed=checkin_removed_embed)
+        elif duplicate_view == "no":
+            return
 
     while (True):
         # obtain checkin details
@@ -254,9 +298,14 @@ async def setcheckin(ctx):
         try:
             interval_msg = await client.wait_for("message", check = message_check, timeout = 30)
         except:
-            ctx.respond(embed = TIMEOUT_EMBED)
+            await ctx.respond(embed = TIMEOUT_EMBED)
             return
         interval = float(interval_msg.content)
+        confirmation_embed.add_field(
+            name = f"you will receive a checkin dm from quinoa every {interval} hours, starting now.",
+            value = "is this correct?",
+            inline = False
+        )
 
         # confirm message
         try:
@@ -264,7 +313,7 @@ async def setcheckin(ctx):
             await ctx.respond(embed=confirmation_embed, view=view) 
             await view.wait()
         except: 
-            ctx.respond(embed = TIMEOUT_EMBED)
+            await ctx.respond(embed = TIMEOUT_EMBED)
             return
 
         if view.value == "no":
@@ -292,26 +341,56 @@ async def setcheckin(ctx):
             description = checkin_message + "\n\n you got this!   ʕ·ᴥ·ʔ",
             color= discord.Color.greyple()
         )
-        try:
-            asyncio.create_task(ctx.author.send(embed=checkin_embed))
-        except: 
-            asyncio.create_task(ctx.author.send(embed=checkin_embed))
 
-    # function def ignore first loop over
-    async def start_checkin(): 
-        await asyncio.sleep(int(interval * 3600))
-        hourly_checkin.start()
-    
-    # call function 
-    await start_checkin()
+        await ctx.author.send(embed=checkin_embed)
+
+    # call function & store within full checkin dict
+    hourly_checkin.start()
+    all_checkins[id] = hourly_checkin
+
 
 # settings
 @client.slash_command(name = "settings", description = "manage your checkins and reminders!")
 async def settings(ctx):
+    # user id
+    id = ctx.author.id
+
+    #embed
     main_settings_embed = discord.Embed(
         title = "settings home",
-        description = "which settings are you looking for?",
+        description = "",
         color = discord.Color.greyple()
+    )
+
+    # checkins
+    checkin_value = None
+
+    if id in all_checkins:
+        checkin_value = "you have a checkin cycle scheduled."
+    else:
+        checkin_value = "no checkins scheduled!"
+
+    main_settings_embed.add_field(
+        name = "checkins",
+        value = checkin_value,
+        inline = False
+    )
+
+    # reminders
+    # blah blah blah
+    # for reminder in all_reminders:
+    #     if reminder.id == id:
+    #         reminder_settings_embed.add_field(
+    #             name = reminder.name
+    #             description = reminder.date
+    #             inline = False
+    #         )
+
+    # settings end message
+    main_settings_embed.add_field(
+        name = "is there anything you would like to modify?",
+        value = "",
+        inline = False
     )
 
     view = settings_buttons()
@@ -323,16 +402,22 @@ async def settings(ctx):
         description = "all your reminders!",
         color = discord.Color.greyple()
     )
+
     checkin_settings_embed = discord.Embed(
         title = "checkin settings",
-        description = "your checkin settings",
+        description = "checkin removed!",
         color = discord.Color.greyple()
     )
 
     if view.value == "reminder":
         await ctx.respond(embed=reminder_settings_embed)
     elif view.value == "checkin":
-        await ctx.respond(embed=checkin_settings_embed)
+        try: 
+            all_checkins[id].cancel()
+            del all_checkins[id]
+            await ctx.respond(embed=checkin_settings_embed)
+        except:
+            await ctx.respond(embed=TIMEOUT_EMBED)
     elif view.value == "exit":
         return
 
