@@ -28,7 +28,7 @@ client = commands.Bot(command_prefix = "!", intents=intents, help_command = None
 
 # global variables
 all_checkins = {} # stores all checkin loops
-all_reminders = {} # stores all reminders of all users
+all_reminders = {} # stores all reminders of all users. is dict w/ userid, storing list of reminders (dict)
 
 # stuff 
 class confirmation_buttons(discord.ui.View):
@@ -53,7 +53,7 @@ class confirmation_buttons(discord.ui.View):
     @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
     async def no_callback(self, button, interaction):
         button.disabled = True
-        self.value = "retry"
+        self.value = "no"
         self.stop()
         await interaction.response.defer()
 
@@ -135,6 +135,11 @@ TIMEOUT_EMBED = discord.Embed(
     description = "an unexpected error has occurred, or you timed out; call the command again to retry.",
     color= discord.Color.greyple()
 )
+CANCELLED_EMBED = discord.Embed(
+    title = "action cancelled",
+    description = "",
+    color = discord.Color.greyple()
+)
 
 # events
 @client.event
@@ -182,52 +187,112 @@ async def help(ctx):
     # remindme with arg
 
 @client.slash_command(name = "remindme", description = "sets a reminder for a message to be sent at a certain time")
-async def remindme(
-    ctx, 
-    reminder: str = "enter the name of your reminder",
-    time: str = "time of your reminder"
-    ):
-    # general variable def
-    reminder_time = ""
+async def remindme(ctx):
+    id = ctx.author.id
 
-    # when do you want me to remind you?
-    time_embed = discord.Embed(
-    title= "set your reminder!",
-        description= "when would you like me to remind you of \"" + reminder + "\"?",
+    while (True):
+        # general variable def
+        reminder_name = None
+        reminder_name_parsed = None
+        reminder_time = None
+        reminder_time_parsed = None
+        
+        # name your reminder
+        name_embed = discord.Embed(
+            title = "set a reminder!",
+            description = "what would you like me to remind you?",
+            color = discord.Color.greyple()
+        )
+        try:
+            await ctx.respond(embed = name_embed)
+            reminder_name = await client.wait_for("message", check = message_check, timeout = 30)
+        except: 
+            await ctx.respond(embed = TIMEOUT_EMBED)
+            return
+        
+        reminder_name_parsed = str(reminder_name.content)
+
+        # when do you want me to remind you?
+        time_embed = discord.Embed(
+        title= "set a reminder!",
+            description= f"when would you like me to remind you of {reminder_name_parsed}?",
+            color = discord.Color.greyple()
+        )
+        time_embed.add_field(
+            name = "please format as MM/DD/YY hh:mm",
+            value = "ex. 5/28/26 16:23\n\nplease use military time!",
+            inline = False
+        )
+        try:
+            await ctx.respond(embed = time_embed) # send out
+            reminder_time = await client.wait_for("message", check = message_check, timeout = 60) # wait for response
+        except:
+            await ctx.respond(embed = TIMEOUT_EMBED)
+            return
+        
+        # parse time str
+            # variables
+        try:
+            reminder_time_parsed = datetime.strptime(reminder_time.content, "%m/%d/%y %H:%M")
+        except:
+            await ctx.respond(embed = TIMEOUT_EMBED)
+            return
+        
+        confirmation_embed = discord.Embed(
+            title = "set a reminder!",
+            description = "please confirm your reminder details",
+            color = discord.Color.greyple()
+        )
+        confirmation_embed.add_field(
+            name = "",
+            value = f"quinoa will dm you to remind you {reminder_name_parsed} at {reminder_time_parsed}.\n\nis this correct?",
+            inline = False
+        )
+
+        try:
+            confirm_reminder_view = confirmation_buttons()
+            await ctx.respond(embed=confirmation_embed, view=confirm_reminder_view) 
+            await confirm_reminder_view.wait()
+        except: 
+            await ctx.respond(embed = TIMEOUT_EMBED)
+            return
+
+        if confirm_reminder_view.value == "no":
+            ctx.respond(embed=CANCELLED_EMBED)
+            return
+        elif confirm_reminder_view.value == "retry":
+            continue
+        elif confirm_reminder_view.value == "yes":
+            break
+
+    # set up reminder
+    now = datetime.now() # get current time
+    wait_time = (reminder_time_parsed - now).total_seconds() # get that time - now = how long to wait
+    
+    if id not in all_reminders:
+        all_reminders[id] = []
+    
+    all_reminders[id].append({
+        "name": reminder_name,
+        "time": reminder_time_parsed
+    })
+
+    success_embed = discord.Embed(
+        title = "success: reminder has been set!",
+        description = "see you then!   ʕ •̀ o •́ ʔ",
         color = discord.Color.greyple()
     )
-    time_embed.add_field(
-        name = "please format as MM/DD/YY hh:mm",
-        value = "ex. 5/28/26 16:23\n\nplease use military time!",
-        inline = False
-    )
-    try:
-        await ctx.respond(embed = time_embed) # send out
-        reminder_time = await client.wait_for("message", check = message_check, timeout = 30) # wait for response
-    except:
-        await ctx.respond(embed = TIMEOUT_EMBED)
-        return
-    
-    # parse time str
-        # variables
-    try:
-        reminder_date = datetime.strptime(reminder_time, "%M/%D/%Y %H:%M:")
-    except:
-        await ctx.respond(embed = TIMEOUT_EMBED)
-        return
-    
-    reminder_confirmation = discord.Embed(
-        title = "confirm reminder",
-        description = "you will receive the reminder \"" + reminder + "\" at " + str(reminder_date),
+
+    await ctx.respond(embed=success_embed)
+
+    await asyncio.sleep(wait_time)
+    reminder_embed = discord.Embed(
+        title = f"reminder!",
+        description = reminder_name_parsed,
         color = discord.Color.greyple()
     )
-    reminder_confirmation.add_field(
-        value = "is this correct?"
-    )
-    await ctx.respond(embed=reminder_confirmation)
-
-    # handle sending reminder
-
+    await ctx.send(embed=reminder_embed)
+    # all_reminders[id] = # object itself
 
 @client.slash_command(name = "motivateme", description = "sends a motivational quote")
 async def motivateme(ctx):
@@ -290,6 +355,7 @@ async def setcheckin(ctx):
             )
             await ctx.respond(embed=checkin_removed_embed)
         elif duplicate_view == "no":
+            await ctx.respond(embed=CANCELLED_EMBED)
             return
 
     while (True):
@@ -317,6 +383,7 @@ async def setcheckin(ctx):
             return
 
         if view.value == "no":
+            await ctx.respond(embed=CANCELLED_EMBED)
             return
         elif view.value == "retry":
             continue
