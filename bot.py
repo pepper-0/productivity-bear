@@ -113,6 +113,21 @@ class yes_no_button(discord.ui.View):
         self.stop()
         await interaction.response.defer()
 
+class delete_exit_button(discord.ui.View):
+    @discord.ui.button(label = "delete reminder", custom_id = "delete_button", style = discord.ButtonStyle.blurple, emoji = "🗑️")
+    async def reminder_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "delete"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def exit_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "no"
+        self.stop()
+        await interaction.response.defer()
+
 MOTIVATE_QUOTES = [ "the little progress you've made today still matters.",
                    "push yourself, because who else will do it for you?",
                    "focus on improving yourself, not proving yourself.",
@@ -266,15 +281,15 @@ async def remindme(ctx):
             break
 
     # set up reminder
-    now = datetime.now() # get current time
-    wait_time = (reminder_time_parsed - now).total_seconds() # get that time - now = how long to wait
+    task_object = schedule_reminder(ctx, reminder_name_parsed, reminder_time_parsed)
     
     if id not in all_reminders:
         all_reminders[id] = []
     
     all_reminders[id].append({
         "name": reminder_name,
-        "time": reminder_time_parsed
+        "time": reminder_time_parsed, 
+        "task_object": task_object
     })
 
     success_embed = discord.Embed(
@@ -285,7 +300,14 @@ async def remindme(ctx):
 
     await ctx.respond(embed=success_embed)
 
-    await asyncio.sleep(wait_time)
+async def schedule_reminder(ctx, reminder_name_parsed, reminder_time_parsed):
+    now = datetime.now() # get current time
+    wait_time = (reminder_time_parsed - now).total_seconds() # get that time - now = how long to wait
+    try:
+        await asyncio.sleep(wait_time)
+    except:
+        return
+    
     reminder_embed = discord.Embed(
         title = f"reminder!",
         description = reminder_name_parsed,
@@ -415,54 +437,13 @@ async def setcheckin(ctx):
     hourly_checkin.start()
     all_checkins[id] = hourly_checkin
 
-
 # settings
 @client.slash_command(name = "settings", description = "manage your checkins and reminders!")
 async def settings(ctx):
     # user id
     id = ctx.author.id
-
-    #embed
-    main_settings_embed = discord.Embed(
-        title = "settings home",
-        description = "",
-        color = discord.Color.greyple()
-    )
-
-    # checkins
     checkin_value = None
-
-    if id in all_checkins:
-        checkin_value = "you have a checkin cycle scheduled."
-    else:
-        checkin_value = "no checkins scheduled!"
-
-    main_settings_embed.add_field(
-        name = "checkins",
-        value = checkin_value,
-        inline = False
-    )
-
-    # reminders
-    # blah blah blah
-    # for reminder in all_reminders:
-    #     if reminder.id == id:
-    #         reminder_settings_embed.add_field(
-    #             name = reminder.name
-    #             description = reminder.date
-    #             inline = False
-    #         )
-
-    # settings end message
-    main_settings_embed.add_field(
-        name = "is there anything you would like to modify?",
-        value = "",
-        inline = False
-    )
-
-    view = settings_buttons()
-    await ctx.respond(embed=main_settings_embed, view=view)
-    await view.wait()
+    reminder_count = 0
 
     reminder_settings_embed = discord.Embed(
         title = "reminder settings",
@@ -476,17 +457,114 @@ async def settings(ctx):
         color = discord.Color.greyple()
     )
 
-    if view.value == "reminder":
-        await ctx.respond(embed=reminder_settings_embed)
-    elif view.value == "checkin":
-        try: 
-            all_checkins[id].cancel()
-            del all_checkins[id]
-            await ctx.respond(embed=checkin_settings_embed)
-        except:
-            await ctx.respond(embed=TIMEOUT_EMBED)
-    elif view.value == "exit":
-        return
+    #embed
+    main_settings_embed = discord.Embed(
+        title = "settings home",
+        description = "",
+        color = discord.Color.greyple()
+    )
+
+    while (True):
+        # checkins
+        if id in all_checkins:
+            checkin_value = "you have a checkin cycle scheduled!"
+        else:
+            checkin_value = "no checkins scheduled!"
+
+        main_settings_embed.add_field(
+            name = "checkins",
+            value = checkin_value,
+            inline = False
+        )
+
+        # reminders
+        if id in all_reminders:
+            for reminder in all_reminders[id]:
+                reminder_count += 1
+                reminder_settings_embed.add_field(
+                    name = reminder["name"],
+                    value = reminder["time"].strftime("%m/%d/%y %H:%M"),
+                    inline = False
+                )
+        main_settings_embed.add_field(
+            name = "reminders",
+            value = f"you have {reminder_count} reminders scheduled."
+        )
+
+
+        # settings end message
+        main_settings_embed.add_field(
+            name = "is there anything you would like to modify?",
+            value = "",
+            inline = False
+        )
+
+        view = settings_buttons()
+        await ctx.respond(embed=main_settings_embed, view=view)
+        await view.wait()
+
+        if view.value == "reminder":
+            reminder_settings_view = delete_exit_button()
+            await ctx.respond(embed=reminder_settings_embed, view=reminder_settings_view)
+            try: 
+                reminder_settings_view.wait()
+            except: 
+                await ctx.respond(embed=TIMEOUT_EMBED)
+                return
+            
+            # approaching deletion territory
+            if reminder_settings_view.value == "delete":
+                delete_message_embed = discord.Embed(
+                    title = "delete reminder",
+                    description = "enter the name of the reminder you'd like to delete",
+                    color = discord.Color.greyple()
+                )
+
+                try:
+                    await ctx.respond(embed = delete_message_embed)
+                    delete_reminder_name = await client.wait_for("message", check = message_check, timeout = 30)
+                except: 
+                    await ctx.respond(embed = TIMEOUT_EMBED)
+                    return
+                
+                delete_reminder_name_parsed = str(delete_reminder_name.content)
+
+                # find index: dict of all ids -> find index of item with reminder_name key
+                try:
+                    delete_reminder_index = None
+                    for reminder in all_reminders[id]:
+                        if reminder["name"] == delete_reminder_name_parsed:
+                            delete_reminder_index = all_reminders[id].index(reminder)
+                            break
+
+                    # delete and cancel function
+                    reminder_delete = all_reminders[id][delete_reminder_index]
+                    reminder_delete["task_object"].cancel()
+                    del all_reminders[id][delete_reminder_index]
+
+                    delete_confirmation_embed = discord.Embed(
+                        title = "reminder deleted!",
+                        description = "",
+                        color = discord.Color.greyple()
+                    )
+                    await ctx.respond(embed = delete_confirmation_embed)
+                except: 
+                    await ctx.respond(embed = TIMEOUT_EMBED) # may change to specified spelling error
+
+            elif reminder_settings_view.value == "exit":
+                return
+
+        elif view.value == "checkin":
+            try: 
+                all_checkins[id].cancel()
+                del all_checkins[id]
+                await ctx.respond(embed=checkin_settings_embed)
+                continue
+            except:
+                await ctx.respond(embed=TIMEOUT_EMBED)
+                return
+        elif view.value == "exit":
+            return
 
 # responses
 @client.event
