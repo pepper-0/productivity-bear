@@ -84,6 +84,10 @@ class settings_buttons(discord.ui.View):
         await interaction.response.defer()
 
 class back_exit_button(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
     @discord.ui.button(label = "back", custom_id = "back_button", style = discord.ButtonStyle.blurple, emoji = "⬅️")
     async def reminder_callback(self, button, interaction):
         button.disabled = True
@@ -99,6 +103,10 @@ class back_exit_button(discord.ui.View):
         await interaction.response.defer()
 
 class yes_no_button(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
     @discord.ui.button(label = "yes", custom_id = "yes_button", style = discord.ButtonStyle.blurple, emoji = "✅")
     async def reminder_callback(self, button, interaction):
         button.disabled = True
@@ -114,6 +122,10 @@ class yes_no_button(discord.ui.View):
         await interaction.response.defer()
 
 class delete_exit_button(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+    
     @discord.ui.button(label = "delete reminder", custom_id = "delete_button", style = discord.ButtonStyle.blurple, emoji = "🗑️")
     async def reminder_callback(self, button, interaction):
         button.disabled = True
@@ -121,10 +133,17 @@ class delete_exit_button(discord.ui.View):
         self.stop()
         await interaction.response.defer()
 
-    @discord.ui.button(label = "no", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    @discord.ui.button(label = "back", custom_id = "back_button", style = discord.ButtonStyle.blurple, emoji = "⬅️")
     async def exit_callback(self, button, interaction):
         button.disabled = True
-        self.value = "no"
+        self.value = "back"
+        self.stop()
+        await interaction.response.defer()
+
+    @discord.ui.button(label = "done", custom_id = "no_button", style = discord.ButtonStyle.grey, emoji = "❌")
+    async def exit_callback(self, button, interaction):
+        button.disabled = True
+        self.value = "done"
         self.stop()
         await interaction.response.defer()
 
@@ -281,13 +300,13 @@ async def remindme(ctx):
             break
 
     # set up reminder
-    task_object = schedule_reminder(ctx, reminder_name_parsed, reminder_time_parsed)
+    task_object = asyncio.create_task(schedule_reminder(ctx, reminder_name_parsed, reminder_time_parsed))
     
     if id not in all_reminders:
         all_reminders[id] = []
     
     all_reminders[id].append({
-        "name": reminder_name,
+        "name": reminder_name_parsed,
         "time": reminder_time_parsed, 
         "task_object": task_object
     })
@@ -315,6 +334,20 @@ async def schedule_reminder(ctx, reminder_name_parsed, reminder_time_parsed):
     )
     await ctx.send(embed=reminder_embed)
     # all_reminders[id] = # object itself
+
+    # delete it from log now
+
+    # find index: dict of all ids -> find index of item with reminder_name key
+    # try:
+    id = ctx.author.id
+
+    for reminder in all_reminders[id]:
+        if reminder["name"] == reminder_name_parsed:
+            delete_reminder_index = all_reminders[id].index(reminder)
+            break
+    # delete object 
+    del all_reminders[id][delete_reminder_index]
+
 
 @client.slash_command(name = "motivateme", description = "sends a motivational quote")
 async def motivateme(ctx):
@@ -443,28 +476,20 @@ async def settings(ctx):
     # user id
     id = ctx.author.id
     checkin_value = None
-    reminder_count = 0
-
-    reminder_settings_embed = discord.Embed(
-        title = "reminder settings",
-        description = "all your reminders!",
-        color = discord.Color.greyple()
-    )
-
-    checkin_settings_embed = discord.Embed(
-        title = "checkin settings",
-        description = "checkin removed!",
-        color = discord.Color.greyple()
-    )
-
-    #embed
-    main_settings_embed = discord.Embed(
-        title = "settings home",
-        description = "",
-        color = discord.Color.greyple()
-    )
 
     while (True):
+        # embeds
+        checkin_settings_embed = discord.Embed(
+            title = "checkin settings",
+            description = "checkin removed!",
+            color = discord.Color.greyple()
+        )
+
+        main_settings_embed = discord.Embed(
+            title = "settings home",
+            description = "",
+            color = discord.Color.greyple()
+        )
         # checkins
         if id in all_checkins:
             checkin_value = "you have a checkin cycle scheduled!"
@@ -478,12 +503,21 @@ async def settings(ctx):
         )
 
         # reminders
+        reminder_count = 0
+        reminder_settings_embed = discord.Embed(
+            title = "reminder settings",
+            description = "all your reminders!",
+            color = discord.Color.greyple()
+        )
+
         if id in all_reminders:
             for reminder in all_reminders[id]:
                 reminder_count += 1
+                # current_reminder_name_parsed = str(reminder["name"].content)
+                # current_reminder_time_parsed = reminder["time"].content.strftime("%m/%d/%y %H:%M")
                 reminder_settings_embed.add_field(
-                    name = reminder["name"],
-                    value = reminder["time"].strftime("%m/%d/%y %H:%M"),
+                    name = "",
+                    value = f"{reminder["time"]}: {reminder["name"]}",
                     inline = False
                 )
         main_settings_embed.add_field(
@@ -499,15 +533,15 @@ async def settings(ctx):
             inline = False
         )
 
-        view = settings_buttons()
-        await ctx.respond(embed=main_settings_embed, view=view)
-        await view.wait()
+        main_settings_view = settings_buttons()
+        await ctx.respond(embed=main_settings_embed, view=main_settings_view)
+        await main_settings_view.wait()
 
-        if view.value == "reminder":
+        if main_settings_view.value == "reminder":
             reminder_settings_view = delete_exit_button()
             await ctx.respond(embed=reminder_settings_embed, view=reminder_settings_view)
             try: 
-                reminder_settings_view.wait()
+                await reminder_settings_view.wait()
             except: 
                 await ctx.respond(embed=TIMEOUT_EMBED)
                 return
@@ -530,31 +564,34 @@ async def settings(ctx):
                 delete_reminder_name_parsed = str(delete_reminder_name.content)
 
                 # find index: dict of all ids -> find index of item with reminder_name key
-                try:
-                    delete_reminder_index = None
-                    for reminder in all_reminders[id]:
-                        if reminder["name"] == delete_reminder_name_parsed:
-                            delete_reminder_index = all_reminders[id].index(reminder)
-                            break
+                # try:
+                delete_reminder_index = None
+                for reminder in all_reminders[id]:
+                    if reminder["name"] == delete_reminder_name_parsed:
+                        delete_reminder_index = all_reminders[id].index(reminder)
+                        break
 
-                    # delete and cancel function
-                    reminder_delete = all_reminders[id][delete_reminder_index]
-                    reminder_delete["task_object"].cancel()
-                    del all_reminders[id][delete_reminder_index]
+                # delete and cancel function
+                reminder_delete = all_reminders[id][delete_reminder_index]
+                reminder_delete["task_object"].cancel()
+                del all_reminders[id][delete_reminder_index]
 
-                    delete_confirmation_embed = discord.Embed(
-                        title = "reminder deleted!",
-                        description = "",
-                        color = discord.Color.greyple()
-                    )
-                    await ctx.respond(embed = delete_confirmation_embed)
-                except: 
-                    await ctx.respond(embed = TIMEOUT_EMBED) # may change to specified spelling error
+                delete_confirmation_embed = discord.Embed(
+                    title = "reminder deleted!",
+                    description = "",
+                    color = discord.Color.greyple()
+                )
+                await ctx.respond(embed = delete_confirmation_embed)
+                # except: 
+                    # await ctx.respond(embed = TIMEOUT_EMBED) # may change to specified spelling error
 
-            elif reminder_settings_view.value == "exit":
+            elif reminder_settings_view.value == "back":
+                continue
+
+            elif reminder_settings_view.value == "done":
                 return
 
-        elif view.value == "checkin":
+        elif main_settings_view.value == "checkin":
             try: 
                 all_checkins[id].cancel()
                 del all_checkins[id]
@@ -563,7 +600,7 @@ async def settings(ctx):
             except:
                 await ctx.respond(embed=TIMEOUT_EMBED)
                 return
-        elif view.value == "exit":
+        elif main_settings_view.value == "exit":
             return
 
 # responses
