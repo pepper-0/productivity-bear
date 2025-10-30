@@ -1,6 +1,6 @@
 # pepper-0 (Jana Leung)'s productivity bear 
 # this is a quick project- started 10/18/25
-# v1: 
+# v1: 10/29/25. it was not a quick project.
 
 # imports
 import discord
@@ -13,8 +13,10 @@ import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
+from keep_alive import keep_alive
 
 #setup
+keep_alive()
 logging.basicConfig(level = logging.INFO)
 
 intents = discord.Intents.default()
