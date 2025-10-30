@@ -519,7 +519,7 @@ async def settings(ctx):
                 # current_reminder_time_parsed = reminder["time"].content.strftime("%m/%d/%y %H:%M")
                 reminder_settings_embed.add_field(
                     name = "",
-                    value = f"{reminder["time"]}: {reminder["name"]}",
+                    value = f"{reminder['time']}: {reminder['name']}",
                     inline = False
                 )
         main_settings_embed.add_field(
